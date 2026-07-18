@@ -151,8 +151,19 @@ resumen_equipo = (
 
 st.markdown("**Ranking estratégico (ordenado por diferencial de goles):**")
 st.dataframe(
-    resumen_equipo.style.background_gradient(subset=["diferencial_goles"], cmap="RdYlGn"),
-    use_container_width=True,
+    resumen_equipo,
+    width="stretch",
+    column_config={
+        "diferencial_goles": st.column_config.ProgressColumn(
+            "Diferencial de goles",
+            min_value=float(resumen_equipo["diferencial_goles"].min()),
+            max_value=float(resumen_equipo["diferencial_goles"].max()),
+            format="%.2f",
+        ),
+        "pct_victorias": st.column_config.ProgressColumn(
+            "% Victorias", min_value=0, max_value=100, format="%.1f%%",
+        ),
+    },
 )
 st.caption(
     "Lectura estratégica: equipos con diferencial de goles alto y buena posesión "
@@ -163,7 +174,7 @@ st.caption(
 st.markdown("---")
 
 with st.expander("📄 Ver muestra de datos crudos filtrados (8 columnas)"):
-    st.dataframe(df_filtrado, use_container_width=True, height=300)
+    st.dataframe(df_filtrado, width="stretch", height=300)
     st.caption(f"Filas: {df_filtrado.shape[0]} | Columnas: {df_filtrado.shape[1]} | Tipos: {dict(df_filtrado.dtypes.astype(str))}")
 
 st.markdown("---")
@@ -177,7 +188,10 @@ tab_cuanti, tab_cuali, tab_graf, tab_tiempo, tab_umbral = st.tabs(
 )
 
 num_cols = df_filtrado.select_dtypes(include=[np.number]).columns.tolist()
-cat_cols = df_filtrado.select_dtypes(include=["object", "bool"]).columns.tolist()
+try:
+    cat_cols = df_filtrado.select_dtypes(include=["object", "str", "bool"]).columns.tolist()
+except TypeError:
+    cat_cols = df_filtrado.select_dtypes(include=["object", "bool"]).columns.tolist()
 
 # ---- TAB 1: CUANTITATIVA ----
 with tab_cuanti:
@@ -188,7 +202,7 @@ with tab_cuanti:
     c3.metric("Posesión promedio %", f"{df_filtrado['posesion_pct'].mean():.1f}")
     c4.metric("Desv. estándar posesión", f"{df_filtrado['posesion_pct'].std():.1f}")
 
-    st.dataframe(df_filtrado[num_cols].describe().T, use_container_width=True)
+    st.dataframe(df_filtrado[num_cols].describe().T, width="stretch")
 
     st.subheader("Matriz de correlación")
     corr = df_filtrado[num_cols].corr(numeric_only=True)
@@ -196,7 +210,7 @@ with tab_cuanti:
         corr, text_auto=".2f", color_continuous_scale="RdBu_r", zmin=-1, zmax=1,
         title="Correlación entre variables numéricas",
     )
-    st.plotly_chart(fig_corr, use_container_width=True)
+    st.plotly_chart(fig_corr, width="stretch")
 
 # ---- TAB 2: CUALITATIVA ----
 with tab_cuali:
@@ -205,10 +219,10 @@ with tab_cuali:
     conteo = df_filtrado[col_cat].value_counts().reset_index()
     conteo.columns = [col_cat, "frecuencia"]
     conteo["porcentaje"] = (conteo["frecuencia"] / conteo["frecuencia"].sum() * 100).round(1)
-    st.dataframe(conteo, use_container_width=True)
+    st.dataframe(conteo, width="stretch")
 
     fig_pie = px.pie(conteo, names=col_cat, values="frecuencia", title=f"Distribución de {col_cat}", hole=0.35)
-    st.plotly_chart(fig_pie, use_container_width=True)
+    st.plotly_chart(fig_pie, width="stretch")
 
     st.markdown(f"**Moda de `{col_cat}`:** {df_filtrado[col_cat].mode().iloc[0]}")
 
@@ -238,7 +252,7 @@ with tab_graf:
     else:  # Histograma
         fig = px.histogram(df_filtrado, x=var_y, color=color_arg, nbins=30, title=f"Histograma de {var_y}")
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 # ---- TAB SERIE DE TIEMPO ----
 with tab_tiempo:
@@ -274,7 +288,7 @@ with tab_tiempo:
             mode="lines", name="Media móvil (3 fechas)", line=dict(dash="dot", color="black"),
         )
     )
-    st.plotly_chart(fig_serie, use_container_width=True)
+    st.plotly_chart(fig_serie, width="stretch")
     st.caption("La línea punteada negra es una media móvil de 3 fechas sobre el promedio general, útil para leer la tendencia.")
 
 # ---- TAB 4: UMBRALES INTERACTIVOS ----
@@ -297,7 +311,7 @@ with tab_umbral:
         title=f"{var_umbral} promedio por {agrupar_por} (umbral = {umbral:.1f})",
     )
     fig_umbral.add_hline(y=umbral, line_dash="dash", line_color="black", annotation_text="Umbral")
-    st.plotly_chart(fig_umbral, use_container_width=True)
+    st.plotly_chart(fig_umbral, width="stretch")
 
     n_supera = int(agg["supera_umbral"].sum())
     st.metric(f"Categorías de '{agrupar_por}' que superan el umbral", n_supera)
