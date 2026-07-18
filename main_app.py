@@ -29,7 +29,7 @@ st.caption(
 # GENERACIÓN DE DATOS SINTÉTICOS (200 registros, 8 columnas, tipos mixtos)
 # --------------------------------------------------------------------------
 @st.cache_data
-def generar_datos(semilla: int, n: int = 200) -> pd.DataFrame:
+def generar_datos(semilla: int, sesgo_argentina: float = 20.0, n: int = 200) -> pd.DataFrame:
     rng = np.random.default_rng(semilla)
 
     equipos = [
@@ -66,7 +66,7 @@ def generar_datos(semilla: int, n: int = 200) -> pd.DataFrame:
     # un pequeño desplazamiento artificial a Argentina. Esto es un dato FICTICIO
     # de prueba, no una afirmación real sobre la FIFA ni sobre ningún equipo.
     base_idx = rng.normal(50, 12, size=n)
-    ajuste_demo = np.where(df["equipo"] == "Argentina", 8, 0)  # sesgo artificial de demo
+    ajuste_demo = np.where(df["equipo"] == "Argentina", sesgo_argentina, 0)  # sesgo artificial de demo
     df["indice_arbitral_sintetico"] = np.clip(base_idx + ajuste_demo, 0, 100).round(1)
 
     return df
@@ -75,11 +75,17 @@ def generar_datos(semilla: int, n: int = 200) -> pd.DataFrame:
 with st.sidebar:
     st.header("⚙️ Controles de simulación")
     semilla = st.number_input("Semilla aleatoria", min_value=0, max_value=9999, value=42)
+    sesgo_argentina = st.slider(
+        "Sesgo artificial de demo para Argentina (puntos extra)",
+        min_value=0.0, max_value=40.0, value=20.0, step=1.0,
+        help="Controla qué tan marcado se ve el desplazamiento artificial en indice_arbitral_sintetico. "
+             "Es 100% ficticio, solo para explorar cómo se manifiesta un sesgo simulado en las gráficas.",
+    )
     if st.button("🔄 Regenerar datos sintéticos"):
         st.cache_data.clear()
     st.markdown("---")
 
-df = generar_datos(semilla)
+df = generar_datos(semilla, sesgo_argentina)
 
 st.info(
     "ℹ️ La columna **indice_arbitral_sintetico** es un dato simulado creado solo para "
@@ -203,4 +209,3 @@ with tab_umbral:
 
 st.markdown("---")
 st.caption("Dashboard de prueba generado con Streamlit + Plotly. Datos 100% sintéticos y regenerables desde la barra lateral.")
-
